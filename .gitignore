@@ -1,0 +1,14 @@
+node_modules
+.next
+.env
+.env.local
+
+/src/generated
+
+# AI Agents & IDEs
+.agents
+.claude
+.windsurf
+.cursor
+.cursorrules
+.vscode
