@@ -34,6 +34,10 @@ export default function ProductDetailPage() {
       .getById(id)
       .then((data) => {
         setProduct(data);
+        // Auto-select variant if there are no options
+        if (data.variants?.length === 1 && (!data.option_types || data.option_types.length === 0)) {
+          setSelectedVariant(data.variants[0]);
+        }
       })
       .catch((err) => {
         toast.error("Failed to load product details.");

@@ -7,7 +7,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ProductForm } from "@/components/features/admin/ProductForm";
-import { Trash2, Plus, AlertCircle } from "lucide-react";
+import { Trash2, Plus, AlertCircle, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -24,6 +24,7 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
 
   const fetchProductsList = async () => {
     try {
@@ -39,6 +40,21 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchProductsList();
   }, []);
+
+  const handleEdit = async (id: number) => {
+    try {
+      const res = await fetch(`/api/products/${id}`);
+      const json = await res.json();
+      if (json.success) {
+        setEditingProduct(json.data);
+        setDialogOpen(true);
+      } else {
+        toast.error(json.message || "Failed to load product details.");
+      }
+    } catch (err) {
+      toast.error("Failed to load product details.");
+    }
+  };
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this product? All its options and variants will be deleted automatically.")) {
@@ -64,6 +80,18 @@ export default function AdminProductsPage() {
       accessorKey: "brand",
       header: "Brand",
       cell: ({ row }) => <span>{row.getValue("brand") || "-"}</span>,
+    },
+    {
+      accessorKey: "total_stock",
+      header: "Total Stock",
+      cell: ({ row }) => {
+        const stock = row.getValue("total_stock") as number;
+        return (
+          <span className={`font-semibold ${stock <= 0 ? "text-destructive" : stock < 10 ? "text-orange-500" : "text-foreground"}`}>
+            {stock !== undefined ? stock : "-"}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "status",
@@ -92,7 +120,15 @@ export default function AdminProductsPage() {
       cell: ({ row }) => {
         const prod = row.original;
         return (
-          <div className="text-right">
+          <div className="text-right flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary hover:bg-primary/10"
+              onClick={() => handleEdit(prod.id)}
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -124,19 +160,24 @@ export default function AdminProductsPage() {
           <p className="text-muted-foreground text-sm">Manage your inventory catalog, option configurations and SKUs</p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingProduct(null);
+        }}>
           <DialogTrigger asChild>
-            <Button className="font-bold flex items-center gap-2">
+            <Button className="font-bold flex items-center gap-2" onClick={() => setEditingProduct(null)}>
               <Plus className="w-4 h-4" /> Add Product
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-border">
             <DialogHeader>
-              <DialogTitle>Add New Product Catalog</DialogTitle>
+              <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product Catalog"}</DialogTitle>
             </DialogHeader>
             <ProductForm
+              initialData={editingProduct}
               onSuccess={() => {
                 setDialogOpen(false);
+                setEditingProduct(null);
                 fetchProductsList();
               }}
             />

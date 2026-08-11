@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
       { expiresIn: "7d" }
     );
 
-    const response = NextResponse.json({ success: true, data: { user: { id: user.id, email: user.email, role: user.role, fullName: user.fullName } } });
-    
+    const response = NextResponse.json({ success: true, data: { user: { id: user.id, email: user.email, role: user.role, fullName: user.fullName }, token: token } });
+
     response.cookies.set("token", token, {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",

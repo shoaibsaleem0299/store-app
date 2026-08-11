@@ -57,9 +57,9 @@ CREATE OR REPLACE FUNCTION public.create_product_with_variants(
 RETURNS bigint AS $$
 DECLARE
   v_product_id bigint;
-  v_type_record json;
-  v_value_record json;
-  v_variant_record json;
+  v_type_record jsonb;
+  v_value_record jsonb;
+  v_variant_record jsonb;
   v_type_id bigint;
   v_value_id bigint;
   v_variant_id bigint;
@@ -80,12 +80,12 @@ BEGIN
   ) ON COMMIT DROP;
 
   -- 2. Insert option types and option values
-  FOR v_type_record IN SELECT * FROM json_array_elements(p_option_types) LOOP
+  FOR v_type_record IN SELECT * FROM jsonb_array_elements(p_option_types) LOOP
     INSERT INTO public.option_types (product_id, name)
     VALUES (v_product_id, v_type_record->>'name')
     RETURNING id INTO v_type_id;
 
-    FOR v_value_record IN SELECT * FROM json_array_elements(v_type_record->'values') LOOP
+    FOR v_value_record IN SELECT * FROM jsonb_array_elements(v_type_record->'values') LOOP
       INSERT INTO public.option_values (option_type_id, value)
       VALUES (v_type_id, v_value_record#>>'{}')
       RETURNING id INTO v_value_id;
@@ -96,7 +96,7 @@ BEGIN
   END LOOP;
 
   -- 3. Insert variants and variant_option_values
-  FOR v_variant_record IN SELECT * FROM json_array_elements(p_variants) LOOP
+  FOR v_variant_record IN SELECT * FROM jsonb_array_elements(p_variants) LOOP
     INSERT INTO public.variants (product_id, sku_code, price, promo_price, stock_qty, image_url, is_active)
     VALUES (
       v_product_id,
@@ -110,7 +110,7 @@ BEGIN
     RETURNING id INTO v_variant_id;
 
     -- Map variant option value relations
-    FOR v_option_name, v_option_val IN SELECT * FROM json_each_text(v_variant_record->'options') LOOP
+    FOR v_option_name, v_option_val IN SELECT * FROM jsonb_each_text(v_variant_record->'options') LOOP
       SELECT value_id INTO v_temp_val_id
       FROM temp_option_value_map
       WHERE type_name = v_option_name AND value_name = v_option_val;

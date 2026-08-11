@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { setUser } from "@/store/slices/auth.slice";
 import { toast } from "sonner";
 import { authService } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
 
   const {
@@ -40,6 +43,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await authService.signIn(values.email, values.password);
+      dispatch(setUser(data.user));
       toast.success("Successfully logged in!");
 
       const role = data.user?.role || "customer";

@@ -31,4 +31,27 @@ export class ProductController extends BaseController<Product> {
       return this.error(err.message || "Failed to create product with variants");
     }
   }
+
+  async updateWithVariants(
+    id: string,
+    payload: {
+      product: Partial<Product>;
+      optionTypes: { name: string; values: string[] }[];
+      variants: {
+        sku_code: string;
+        price: number;
+        promo_price?: number;
+        stock_qty: number;
+        image_url?: string;
+        options: Record<string, string>;
+      }[];
+    }
+  ) {
+    try {
+      const data = await this.productModel.updateWithVariants(id, payload);
+      return this.success({ id: data });
+    } catch (err: any) {
+      return this.error(err.message || "Failed to update product with variants");
+    }
+  }
 }

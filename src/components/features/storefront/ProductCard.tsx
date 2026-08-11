@@ -11,6 +11,7 @@ interface ProductCardProps {
     base_images: string[];
     price_range: { min: number; max: number };
     colors: string[];
+    total_stock?: number;
   };
 }
 
@@ -19,6 +20,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const minPrice = product.price_range?.min ?? 0;
   const maxPrice = product.price_range?.max ?? 0;
   const hasMultiplePrices = minPrice !== maxPrice;
+  const isOutOfStock = product.total_stock !== undefined && product.total_stock <= 0;
 
   // Simple mapping of standard color names to CSS background color classes
   const colorMap: Record<string, string> = {
@@ -36,16 +38,21 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link href={`/products/${product.id}`} className="group block">
-      <Card className="overflow-hidden transition-all duration-300 group-hover:shadow-lg border border-border bg-background">
+      <Card className="overflow-hidden transition-all duration-300 group-hover:shadow-lg border border-border bg-background relative">
+        {isOutOfStock && (
+          <div className="absolute top-2 right-2 z-10 bg-destructive text-destructive-foreground text-[10px] font-extrabold px-2 py-1 rounded-sm uppercase tracking-wider">
+            Out of Stock
+          </div>
+        )}
         <div className="relative aspect-square w-full overflow-hidden bg-secondary flex items-center justify-center">
           {imageUrl ? (
             <img
               src={imageUrl}
               alt={product.name}
-              className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+              className={`h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105 ${isOutOfStock ? "opacity-60 grayscale-[0.5]" : ""}`}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center p-4 text-muted-foreground">
+            <div className={`flex flex-col items-center justify-center p-4 text-muted-foreground ${isOutOfStock ? "opacity-60" : ""}`}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-muted-foreground/50 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>

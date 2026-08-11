@@ -15,9 +15,10 @@ import { generateSku } from "@/utils/generateSku";
 
 interface ProductFormProps {
   onSuccess?: () => void;
+  initialData?: any;
 }
 
-export function ProductForm({ onSuccess }: ProductFormProps) {
+export function ProductForm({ onSuccess, initialData }: ProductFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -41,10 +42,77 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
     });
   }, []);
 
+  // Initialize from initialData if editing
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name || "");
+      setDescription(initialData.description || "");
+      setBrand(initialData.brand || "");
+      setCategoryId(initialData.category_id ? initialData.category_id.toString() : "");
+      
+      let images = [];
+      try {
+        images = typeof initialData.base_images === "string" ? JSON.parse(initialData.base_images) : initialData.base_images;
+      } catch(e) {}
+      setBaseImages(images || []);
+
+      if (initialData.option_types && Array.isArray(initialData.option_types)) {
+        setOptionTypes(initialData.option_types.map((ot: any) => ({
+          id: ot.id,
+          name: ot.name,
+          values: ot.option_values?.map((ov: any) => ov.value) || [],
+          tempValue: ""
+        })));
+      }
+
+      if (initialData.variants && Array.isArray(initialData.variants)) {
+        const valueMap = new Map();
+        if (initialData.option_types) {
+          initialData.option_types.forEach((ot: any) => {
+            if (ot.option_values) {
+              ot.option_values.forEach((ov: any) => {
+                valueMap.set(ov.id, { typeName: ot.name, value: ov.value });
+              });
+            }
+          });
+        }
+
+        const activeVariants = initialData.variants.filter((v: any) => v.is_active);
+        setVariants(activeVariants.map((v: any) => {
+          const options: Record<string, string> = {};
+          if (v.variant_option_values) {
+             v.variant_option_values.forEach((vov: any) => {
+                const mapping = valueMap.get(vov.option_value_id);
+                if (mapping) {
+                   options[mapping.typeName] = mapping.value;
+                }
+             });
+          }
+          return {
+            sku_code: v.sku_code,
+            price: v.price,
+            promo_price: v.promo_price,
+            stock_qty: v.stock_qty,
+            image_url: v.image_url,
+            options
+          };
+        }));
+      }
+    }
+  }, [initialData]);
+
   // Recalculate variants SKUs when optionTypes or name changes
   useEffect(() => {
     if (optionTypes.length === 0) {
-      setVariants([]);
+      const existing = variants.find((v) => Object.keys(v.options).length === 0);
+      setVariants([{
+        sku_code: existing?.sku_code || generateSku(name || "PROD", {}),
+        price: existing?.price || 1000,
+        promo_price: existing?.promo_price || "",
+        stock_qty: existing?.stock_qty || 50,
+        image_url: existing?.image_url || "",
+        options: {},
+      }]);
       return;
     }
 
@@ -193,8 +261,11 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
         options: v.options,
       }));
 
-      const res = await fetch("/api/admin/products", {
-        method: "POST",
+      const method = initialData?.id ? "PUT" : "POST";
+      const url = initialData?.id ? `/api/admin/products/${initialData.id}` : "/api/admin/products";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           product: {
@@ -211,7 +282,7 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
 
       const json = await res.json();
       if (json.success) {
-        toast.success("Product and variants created successfully!");
+        toast.success(initialData?.id ? "Product updated successfully!" : "Product and variants created successfully!");
         if (onSuccess) onSuccess();
       } else {
         toast.error(json.message || "Failed to save product.");
@@ -396,9 +467,11 @@ export function ProductForm({ onSuccess }: ProductFormProps) {
               </TableHeader>
               <TableBody>
                 {variants.map((v, index) => {
-                  const combinationText = Object.entries(v.options)
-                    .map(([k, val]) => `${k}: ${val}`)
-                    .join(", ");
+                  const combinationText = Object.keys(v.options).length > 0
+                    ? Object.entries(v.options)
+                        .map(([k, val]) => `${k}: ${val}`)
+                        .join(", ")
+                    : "Default";
                   return (
                     <TableRow key={index}>
                       <TableCell className="text-xs font-semibold">{combinationText}</TableCell>

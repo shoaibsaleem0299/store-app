@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { productService } from "@/services-client/product.service";
 
 export const fetchProducts = createAsyncThunk("products/fetch", async (params: any) => {
-  return await productService.list(params);
+  return await productService.listWithMeta(params);
 });
 
 const productSlice = createSlice({

@@ -1,12 +1,12 @@
 export class BaseApiService<T> {
-  constructor(protected resource: string) {}
+  constructor(protected resource: string) { }
 
   private baseUrl = "/api";
 
   async list(params?: Record<string, any>) {
     const query = params ? "?" + new URLSearchParams(params).toString() : "";
     const res = await fetch(`${this.baseUrl}/${this.resource}${query}`);
-    return this.handle<{ data: T[]; meta: any }>(res);
+    return this.handle<T[]>(res);
   }
 
   async getById(id: string | number) {

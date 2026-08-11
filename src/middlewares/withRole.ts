@@ -5,7 +5,9 @@ const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey123";
 
 export function withRole(allowedRoles: string[]) {
   return async (req: NextRequest) => {
-    const token = req.cookies.get("token")?.value;
+    const authHeader = req.headers.get("authorization");
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+    const token = bearerToken || req.cookies.get("token")?.value;
     
     if (!token) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });

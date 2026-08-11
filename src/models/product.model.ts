@@ -48,10 +48,13 @@ export class ProductModel extends BaseModel<Product> {
       const colorType = p.optionTypes?.find((ot: any) => ot.name.toLowerCase() === "color");
       const colors = colorType ? colorType.optionValues.map((v: any) => v.value) : [];
 
+      const totalStock = p.variants?.reduce((sum: number, v: any) => sum + (v.stockQty || 0), 0) || 0;
+
       return {
         ...p,
         price_range: { min: minPrice, max: maxPrice },
         colors,
+        total_stock: totalStock,
       };
     });
 
@@ -105,6 +108,31 @@ export class ProductModel extends BaseModel<Product> {
     );
 
     const productId = result[0]?.create_product_with_variants;
+    return Number(productId);
+  }
+
+  async updateWithVariants(id: string | number, payload: any) {
+    const productId = this.parseId(id) as bigint;
+    const name = payload.product.name;
+    const description = payload.product.description || "";
+    const categoryId = payload.product.category_id ? BigInt(payload.product.category_id) : null;
+    const brand = payload.product.brand || "";
+    const baseImages = JSON.stringify(payload.product.base_images || []);
+    const optionTypes = JSON.stringify(payload.optionTypes || []);
+    const variants = JSON.stringify(payload.variants || []);
+
+    await this.prisma.$queryRawUnsafe(
+      `SELECT public.update_product_with_variants($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)`,
+      productId,
+      name,
+      description,
+      categoryId,
+      brand,
+      baseImages,
+      optionTypes,
+      variants
+    );
+
     return Number(productId);
   }
 }
