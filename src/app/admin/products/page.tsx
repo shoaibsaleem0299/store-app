@@ -5,11 +5,10 @@ import { productService } from "@/services-client/product.service";
 import { DataTable } from "@/components/shared/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ProductForm } from "@/components/features/admin/ProductForm";
 import { Trash2, Plus, AlertCircle, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
 
 interface Product {
   id: number;
@@ -21,10 +20,9 @@ interface Product {
 }
 
 export default function AdminProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
 
   const fetchProductsList = async () => {
     try {
@@ -41,19 +39,8 @@ export default function AdminProductsPage() {
     fetchProductsList();
   }, []);
 
-  const handleEdit = async (id: number) => {
-    try {
-      const res = await fetch(`/api/products/${id}`);
-      const json = await res.json();
-      if (json.success) {
-        setEditingProduct(json.data);
-        setDialogOpen(true);
-      } else {
-        toast.error(json.message || "Failed to load product details.");
-      }
-    } catch (err) {
-      toast.error("Failed to load product details.");
-    }
+  const handleEdit = (id: number) => {
+    router.push(`/admin/products/edit?id=${id}`);
   };
 
   const handleDelete = async (id: number) => {
@@ -160,29 +147,12 @@ export default function AdminProductsPage() {
           <p className="text-muted-foreground text-sm">Manage your inventory catalog, option configurations and SKUs</p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) setEditingProduct(null);
-        }}>
-          <DialogTrigger asChild>
-            <Button className="font-bold flex items-center gap-2" onClick={() => setEditingProduct(null)}>
-              <Plus className="w-4 h-4" /> Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-border">
-            <DialogHeader>
-              <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product Catalog"}</DialogTitle>
-            </DialogHeader>
-            <ProductForm
-              initialData={editingProduct}
-              onSuccess={() => {
-                setDialogOpen(false);
-                setEditingProduct(null);
-                fetchProductsList();
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button
+          className="font-bold flex items-center gap-2"
+          onClick={() => router.push('/admin/products/create')}
+        >
+          <Plus className="w-4 h-4" /> Add Product
+        </Button>
       </div>
 
       <DataTable

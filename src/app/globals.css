@@ -4,19 +4,23 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --border: 214.3 31.8% 91.4%;
-    --radius: 0.5rem;
+    --background: 60 20% 97%;
+    --foreground: 34 9% 15%;
+    --primary: 34 9% 15%;
+    --primary-foreground: 60 20% 97%;
+    --secondary: 60 10% 92%;
+    --secondary-foreground: 34 9% 15%;
+    --border: 60 10% 90%;
+    --radius: 0.3rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
+    --background: 34 9% 15%;
+    --foreground: 60 20% 97%;
+    --primary: 60 20% 97%;
+    --primary-foreground: 34 9% 15%;
+    --secondary: 34 10% 20%;
+    --secondary-foreground: 60 20% 97%;
+    --border: 34 10% 25%;
   }
 }

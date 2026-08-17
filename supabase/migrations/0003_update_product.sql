@@ -19,7 +19,7 @@ DECLARE
   v_option_name text;
   v_option_val text;
   v_temp_val_id bigint;
-  v_incoming_skus text[];
+  v_incoming_ids bigint[];
 BEGIN
   -- 1. Update basic product info
   UPDATE public.products
@@ -56,14 +56,16 @@ BEGIN
     END LOOP;
   END LOOP;
 
-  -- Extract all incoming SKUs to an array
-  SELECT array_agg(value->>'sku_code') INTO v_incoming_skus FROM jsonb_array_elements(p_variants);
+  -- Extract all incoming IDs to an array
+  SELECT array_agg((value->>'id')::bigint) INTO v_incoming_ids 
+  FROM jsonb_array_elements(p_variants)
+  WHERE (value->>'id') IS NOT NULL;
 
   -- 4. Mark removed variants as inactive
-  IF v_incoming_skus IS NOT NULL THEN
+  IF v_incoming_ids IS NOT NULL THEN
     UPDATE public.variants
     SET is_active = false
-    WHERE product_id = p_product_id AND sku_code != ALL(v_incoming_skus);
+    WHERE product_id = p_product_id AND id != ALL(v_incoming_ids);
   ELSE
     UPDATE public.variants
     SET is_active = false
@@ -72,23 +74,41 @@ BEGIN
 
   -- 5. Insert/Upsert variants and variant_option_values
   FOR v_variant_record IN SELECT * FROM jsonb_array_elements(p_variants) LOOP
-    INSERT INTO public.variants (product_id, sku_code, price, promo_price, stock_qty, image_url, is_active)
-    VALUES (
-      p_product_id,
-      v_variant_record->>'sku_code',
-      (v_variant_record->>'price')::numeric(10,2),
-      (v_variant_record->>'promo_price')::numeric(10,2),
-      (v_variant_record->>'stock_qty')::int,
-      v_variant_record->>'image_url',
-      true
-    )
-    ON CONFLICT (sku_code) DO UPDATE SET
-      price = EXCLUDED.price,
-      promo_price = EXCLUDED.promo_price,
-      stock_qty = EXCLUDED.stock_qty,
-      image_url = EXCLUDED.image_url,
-      is_active = true
-    RETURNING id INTO v_variant_id;
+    v_variant_id := NULL;
+
+    IF (v_variant_record->>'id') IS NOT NULL THEN
+      -- Update existing variant by ID
+      UPDATE public.variants SET
+        sku_code = v_variant_record->>'sku_code',
+        price = (v_variant_record->>'price')::numeric(10,2),
+        promo_price = (v_variant_record->>'promo_price')::numeric(10,2),
+        stock_qty = (v_variant_record->>'stock_qty')::int,
+        image_url = v_variant_record->>'image_url',
+        is_active = true
+      WHERE id = (v_variant_record->>'id')::bigint
+      RETURNING id INTO v_variant_id;
+    END IF;
+
+    IF v_variant_id IS NULL THEN
+      -- Insert new variant (or fallback if ID not found)
+      INSERT INTO public.variants (product_id, sku_code, price, promo_price, stock_qty, image_url, is_active)
+      VALUES (
+        p_product_id,
+        v_variant_record->>'sku_code',
+        (v_variant_record->>'price')::numeric(10,2),
+        (v_variant_record->>'promo_price')::numeric(10,2),
+        (v_variant_record->>'stock_qty')::int,
+        v_variant_record->>'image_url',
+        true
+      )
+      ON CONFLICT (sku_code) DO UPDATE SET
+        price = EXCLUDED.price,
+        promo_price = EXCLUDED.promo_price,
+        stock_qty = EXCLUDED.stock_qty,
+        image_url = EXCLUDED.image_url,
+        is_active = true
+      RETURNING id INTO v_variant_id;
+    END IF;
 
     -- Map variant option value relations
     FOR v_option_name, v_option_val IN SELECT * FROM jsonb_each_text(v_variant_record->'options') LOOP

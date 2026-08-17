@@ -17,8 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, LogOut, LayoutDashboard, ShoppingBag } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Search, LogOut, LayoutDashboard, ShoppingBag, User } from "lucide-react";
 
 export function StorefrontNav() {
   const dispatch = useDispatch<AppDispatch>();
@@ -34,85 +33,86 @@ export function StorefrontNav() {
     }
   };
 
-  return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-extrabold text-xl tracking-tight">
-          <img src="/images/logo.svg" alt="logo" className="w-8 h-8 text-primary" />
-          <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">StoreApp</span>
-        </Link>
+  const navLinks = [
+    { name: "SUITS", href: "/category/suits" },
+    { name: "SCARVES", href: "/category/scarves" },
+    { name: "DUPATTAS", href: "/category/dupattas" },
+    { name: "NEW", href: "/new" },
+    { name: "SALE", href: "/sale" },
+  ];
 
-        {/* Search */}
-        <div className="flex-1 max-w-md hidden md:flex relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search products..." className="pl-9 bg-secondary border-border" />
+  return (
+    <header className="sticky top-0 z-40 w-full bg-background border-b border-transparent transition-all duration-300">
+      <div className="container mx-auto px-4 h-20 flex items-center justify-between">
+        {/* Logo */}
+        <div className="w-1/4 flex items-center">
+          <Link href="/" className="font-serif font-bold text-3xl tracking-tight text-foreground">
+            Buver
+          </Link>
         </div>
 
+        {/* Center Nav Links */}
+        <nav className="hidden md:flex flex-1 justify-center gap-8">
+          {navLinks.map((link) => (
+            <Link 
+              key={link.name} 
+              href={link.href}
+              className="text-[10px] uppercase tracking-[0.2em] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {link.name}
+            </Link>
+          ))}
+        </nav>
+
         {/* Actions */}
-        <div className="flex items-center gap-4">
+        <div className="w-1/4 flex items-center justify-end gap-5">
+          <button className="text-foreground hover:opacity-70 transition-opacity">
+            <Search className="w-5 h-5" strokeWidth={1.5} />
+          </button>
+          
           {isAuthenticated ? (
-            <>
-              {user?.role === "admin" && (
-                <Link href="/admin/dashboard">
-                  <Button variant="ghost" size="icon" className="hover:bg-secondary" title="Admin Dashboard">
-                    <LayoutDashboard className="w-5 h-5 text-foreground" />
-                  </Button>
-                </Link>
-              )}
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <Avatar className="h-9 w-9 border border-border">
-                      <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs uppercase">
-                        {user.fullName?.slice(0, 2) || user.email?.slice(0, 2) || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-background border border-border" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-semibold text-foreground">{user.fullName || "User"}</p>
-                      <p className="text-xs text-muted-foreground font-semibold truncate">{user.email}</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="border-border" />
+            <DropdownMenu>
+              <DropdownMenuTrigger className="outline-none">
+                <div className="text-foreground hover:opacity-70 transition-opacity">
+                  <User className="w-5 h-5" strokeWidth={1.5} />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-background border border-border" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{user.fullName || "User"}</p>
+                    <p className="text-xs text-muted-foreground font-semibold truncate">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="border-border" />
+                <DropdownMenuItem asChild>
+                  <Link href="/orders" className="flex items-center cursor-pointer font-medium text-sm">
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    <span>Order History</span>
+                  </Link>
+                </DropdownMenuItem>
+                {user?.role === "admin" && (
                   <DropdownMenuItem asChild>
-                    <Link href="/orders" className="flex items-center cursor-pointer">
-                      <ShoppingBag className="mr-2 h-4 w-4" />
-                      <span>Order History</span>
+                    <Link href="/admin/dashboard" className="flex items-center cursor-pointer font-medium text-sm">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span>Admin Panel</span>
                     </Link>
                   </DropdownMenuItem>
-                  {user?.role === "admin" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin/dashboard" className="flex items-center cursor-pointer">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        <span>Admin Panel</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator className="border-border" />
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
+                )}
+                <DropdownMenuSeparator className="border-border" />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 cursor-pointer font-medium text-sm">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link href="/login">
-                <Button variant="ghost" size="sm" className="font-bold">Log in</Button>
-              </Link>
-              <Link href="/register">
-                <Button size="sm" className="font-bold">Sign up</Button>
-              </Link>
-            </div>
+            <Link href="/login" className="text-foreground hover:opacity-70 transition-opacity">
+               <User className="w-5 h-5" strokeWidth={1.5} />
+            </Link>
           )}
 
-          <div className="border-l border-border h-6 pl-4 flex items-center">
+          <div className="flex items-center relative">
             <CartDrawer />
           </div>
         </div>

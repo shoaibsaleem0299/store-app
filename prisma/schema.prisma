@@ -7,125 +7,249 @@ datasource db {
   provider = "postgresql"
 }
 
-model Category {
-  id       BigInt     @id @default(autoincrement())
-  name     String
-  parentId BigInt?    @map("parent_id")
-  parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: Restrict)
-  children Category[] @relation("CategoryToCategory")
-  products Product[]
 
+// =========================
+// CATEGORY
+// =========================
+
+model Category {
+  id        BigInt     @id @default(autoincrement())
+  name      String
+  parentId  BigInt?    @map("parent_id")
+
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@index([parentId])
   @@map("categories")
 }
 
+
+// =========================
+// PRODUCT
+// =========================
+
 model Product {
-  id          BigInt       @id @default(autoincrement())
+  id          BigInt   @id @default(autoincrement())
   name        String
   description String?
-  categoryId  BigInt?      @map("category_id")
-  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  categoryId  BigInt?  @map("category_id")
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   brand       String?
-  baseImages  Json         @default("[]") @map("base_images")
-  status      String       @default("active")
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  status      String   @default("active")
+
+  baseImages  Json     @default("[]") @map("base_images")
+
   optionTypes OptionType[]
   variants    Variant[]
 
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([categoryId])
+  @@index([status])
   @@map("products")
 }
 
+
+// =========================
+// OPTION TYPE
+// Example: Color, Size
+// =========================
+
 model OptionType {
-  id           BigInt        @id @default(autoincrement())
-  productId    BigInt?       @map("product_id")
-  product      Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id           BigInt   @id @default(autoincrement())
+
+  productId    BigInt   @map("product_id")
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   name         String
-  displayOrder Int           @default(0) @map("display_order")
+  displayOrder Int      @default(0) @map("display_order")
+
   optionValues OptionValue[]
 
+  @@unique([productId, name])
+  @@index([productId])
   @@map("option_types")
 }
 
+
+// =========================
+// OPTION VALUE
+// Example: Black, White, Large
+// =========================
+
 model OptionValue {
-  id                  BigInt                @id @default(autoincrement())
-  optionTypeId        BigInt?               @map("option_type_id")
-  optionType          OptionType?           @relation(fields: [optionTypeId], references: [id], onDelete: Cascade)
+  id                  BigInt   @id @default(autoincrement())
+
+  optionTypeId        BigInt   @map("option_type_id")
+  optionType          OptionType @relation(fields: [optionTypeId], references: [id], onDelete: Cascade)
+
   value               String
-  swatchImage         String?               @map("swatch_image")
-  displayOrder        Int                   @default(0) @map("display_order")
+  swatchImage         String?  @map("swatch_image")
+  displayOrder        Int      @default(0) @map("display_order")
+
   variantOptionValues VariantOptionValue[]
 
+  @@unique([optionTypeId, value])
+  @@index([optionTypeId])
   @@map("option_values")
 }
 
+
+// =========================
+// VARIANT
+// Actual sellable SKU
+// =========================
+
 model Variant {
-  id                  BigInt                @id @default(autoincrement())
-  productId           BigInt?               @map("product_id")
-  product             Product?              @relation(fields: [productId], references: [id], onDelete: Cascade)
-  skuCode             String                @unique @map("sku_code")
-  price               Decimal               @db.Decimal(10, 2)
-  promoPrice          Decimal?              @map("promo_price") @db.Decimal(10, 2)
-  stockQty            Int                   @default(0) @map("stock_qty")
-  imageUrl            String?               @map("image_url")
-  isActive            Boolean               @default(true) @map("is_active")
+  id                  BigInt   @id @default(autoincrement())
+
+  productId           BigInt   @map("product_id")
+  product             Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  skuCode             String   @unique @map("sku_code")
+
+  price               Decimal  @db.Decimal(10, 2)
+  promoPrice          Decimal? @map("promo_price") @db.Decimal(10, 2)
+
+  stockQty            Int      @default(0) @map("stock_qty")
+
+  imageUrl            String?  @map("image_url")
+
+  isActive            Boolean  @default(true) @map("is_active")
+
   variantOptionValues VariantOptionValue[]
   cartItems           CartItem[]
   orderItems          OrderItem[]
 
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([productId])
+  @@index([productId, isActive])
   @@map("variants")
 }
 
+
+// =========================
+// VARIANT ↔ OPTION VALUE
+// =========================
+
 model VariantOptionValue {
-  variantId     BigInt      @map("variant_id")
+  variantId     BigInt
+  optionValueId BigInt
+
   variant       Variant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  optionValueId BigInt      @map("option_value_id")
   optionValue   OptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
 
   @@id([variantId, optionValueId])
+  @@index([optionValueId])
   @@map("variant_option_values")
 }
 
+
+// =========================
+// CART
+// =========================
+
 model CartItem {
-  id        BigInt   @id @default(autoincrement())
-  userId    String?  @map("user_id") @db.Uuid
-  variantId BigInt?  @map("variant_id")
-  variant   Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
-  quantity  Int      @default(1)
+  id        BigInt  @id @default(autoincrement())
+
+  userId    String  @map("user_id") @db.Uuid
+  variantId BigInt  @map("variant_id")
+
+  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  quantity  Int     @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, variantId])
+  @@index([userId])
+  @@index([variantId])
   @@map("cart_items")
 }
 
+
+// =========================
+// ORDER
+// =========================
+
 model Order {
-  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  buyerId         String?     @map("buyer_id") @db.Uuid
-  status          String      @default("pending")
-  totalAmount     Decimal     @map("total_amount") @db.Decimal(10, 2)
-  shippingAddress Json?       @map("shipping_address")
-  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  orderNumber     String   @unique @map("order_number")
+
+  buyerId         String   @db.Uuid
+
+  status          String   @default("pending")
+
+  paymentType     String   @map("payment_type")
+  paymentStatus   String   @default("pending") @map("payment_status")
+
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
+
+  shippingAddress Json     @map("shipping_address")
+
   orderItems      OrderItem[]
 
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([buyerId])
+  @@index([status])
+  @@index([paymentStatus])
   @@map("orders")
 }
 
-model OrderItem {
-  id        BigInt   @id @default(autoincrement())
-  orderId   String?  @map("order_id") @db.Uuid
-  order     Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variantId BigInt?  @map("variant_id")
-  variant   Variant? @relation(fields: [variantId], references: [id], onDelete: Restrict)
-  quantity  Int
-  unitPrice Decimal  @map("unit_price") @db.Decimal(10, 2)
 
+// =========================
+// ORDER ITEM
+// =========================
+
+model OrderItem {
+  id        BigInt  @id @default(autoincrement())
+
+  orderId   String  @map("order_id") @db.Uuid
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  variantId BigInt  @map("variant_id")
+  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  quantity  Int
+
+  // Price at the time of purchase
+  unitPrice Decimal @map("unit_price") @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@index([variantId])
   @@map("order_items")
 }
 
+
+// =========================
+// USER PROFILE
+// =========================
+
 model Profile {
   id        String   @id @db.Uuid
-  email     String
+
+  email     String   @unique
   password  String?
+
   fullName  String?  @map("full_name")
   role      String   @default("customer")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("profiles")
 }

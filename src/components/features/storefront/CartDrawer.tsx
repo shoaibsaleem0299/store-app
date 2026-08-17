@@ -33,14 +33,14 @@ export function CartDrawer() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" className="relative p-2 hover:bg-secondary">
-          <ShoppingBag className="w-6 h-6 text-foreground" />
+        <div className="text-foreground hover:opacity-70 transition-opacity relative cursor-pointer flex items-center">
+          <ShoppingBag className="w-5 h-5" strokeWidth={1.5} />
           {totalItemCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold">
+            <span className="absolute -top-1 -right-2 bg-foreground text-background text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
               {totalItemCount}
             </span>
           )}
-        </Button>
+        </div>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md flex flex-col h-full bg-background border-l border-border">
         <SheetHeader className="pb-4 border-b border-border">

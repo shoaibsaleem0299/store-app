@@ -89,49 +89,186 @@ export class ProductModel extends BaseModel<Product> {
 
   async createWithVariants(payload: any) {
     const name = payload.product.name;
-    const description = payload.product.description || "";
+    const description = payload.product.description || null;
     const categoryId = payload.product.category_id ? BigInt(payload.product.category_id) : null;
-    const brand = payload.product.brand || "";
-    const baseImages = JSON.stringify(payload.product.base_images || []);
-    const optionTypes = JSON.stringify(payload.optionTypes || []);
-    const variants = JSON.stringify(payload.variants || []);
+    const brand = payload.product.brand || null;
+    const baseImages = payload.product.base_images || [];
+    const incomingOptions = payload.optionTypes || [];
+    const incomingVariants = payload.variants || [];
 
-    const result = await this.prisma.$queryRawUnsafe<Array<{ create_product_with_variants: bigint }>>(
-      `SELECT public.create_product_with_variants($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb)`,
-      name,
-      description,
-      categoryId,
-      brand,
-      baseImages,
-      optionTypes,
-      variants
-    );
+    let newProductId: bigint = 0;
 
-    const productId = result[0]?.create_product_with_variants;
-    return Number(productId);
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Create Product
+      const product = await tx.product.create({
+        data: {
+          name, description, categoryId, brand, baseImages
+        }
+      });
+      newProductId = product.id;
+
+      // 2. Create Options
+      const optionValueMap = new Map<string, bigint>();
+      for (let i = 0; i < incomingOptions.length; i++) {
+        const opt = incomingOptions[i];
+        const optionType = await tx.optionType.create({
+          data: {
+            productId: newProductId,
+            name: opt.name,
+            displayOrder: i,
+          }
+        });
+
+        for (let j = 0; j < opt.values.length; j++) {
+          const valName = opt.values[j];
+          const optionValue = await tx.optionValue.create({
+            data: {
+              optionTypeId: optionType.id,
+              value: valName,
+              displayOrder: j,
+            }
+          });
+          optionValueMap.set(`${opt.name}:${valName}`, optionValue.id);
+        }
+      }
+
+      // 3. Create Variants
+      for (const variantPayload of incomingVariants) {
+        const variant = await tx.variant.create({
+          data: {
+            productId: newProductId,
+            skuCode: variantPayload.sku_code,
+            price: variantPayload.price,
+            promoPrice: variantPayload.promo_price || null,
+            stockQty: variantPayload.stock_qty || 0,
+            imageUrl: variantPayload.image_url || null,
+            isActive: true
+          }
+        });
+
+        if (variantPayload.options) {
+          for (const [optName, optVal] of Object.entries(variantPayload.options)) {
+            const mappedValId = optionValueMap.get(`${optName}:${optVal as string}`);
+            if (mappedValId) {
+              await tx.variantOptionValue.create({
+                data: {
+                  variantId: variant.id,
+                  optionValueId: mappedValId
+                }
+              });
+            }
+          }
+        }
+      }
+    });
+
+    return Number(newProductId);
   }
 
   async updateWithVariants(id: string | number, payload: any) {
     const productId = this.parseId(id) as bigint;
     const name = payload.product.name;
-    const description = payload.product.description || "";
+    const description = payload.product.description || null;
     const categoryId = payload.product.category_id ? BigInt(payload.product.category_id) : null;
-    const brand = payload.product.brand || "";
-    const baseImages = JSON.stringify(payload.product.base_images || []);
-    const optionTypes = JSON.stringify(payload.optionTypes || []);
-    const variants = JSON.stringify(payload.variants || []);
+    const brand = payload.product.brand || null;
+    const baseImages = payload.product.base_images || [];
+    const incomingOptions = payload.optionTypes || [];
+    const incomingVariants = payload.variants || [];
 
-    await this.prisma.$queryRawUnsafe(
-      `SELECT public.update_product_with_variants($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)`,
-      productId,
-      name,
-      description,
-      categoryId,
-      brand,
-      baseImages,
-      optionTypes,
-      variants
-    );
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Update basic product info
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          name, description, categoryId, brand, baseImages
+        }
+      });
+
+      // 2. Clear old option types (this cascades to option_values and variant_option_values)
+      await tx.optionType.deleteMany({
+        where: { productId }
+      });
+
+      // 3. Insert new OptionTypes and OptionValues
+      const optionValueMap = new Map<string, bigint>();
+      for (let i = 0; i < incomingOptions.length; i++) {
+        const opt = incomingOptions[i];
+        const optionType = await tx.optionType.create({
+          data: {
+            productId,
+            name: opt.name,
+            displayOrder: i,
+          }
+        });
+
+        for (let j = 0; j < opt.values.length; j++) {
+          const valName = opt.values[j];
+          const optionValue = await tx.optionValue.create({
+            data: {
+              optionTypeId: optionType.id,
+              value: valName,
+              displayOrder: j,
+            }
+          });
+          optionValueMap.set(`${opt.name}:${valName}`, optionValue.id);
+        }
+      }
+
+      // 4. Upsert Variants
+      const incomingVariantIds = incomingVariants.map((v: any) => v.id).filter(Boolean).map(BigInt);
+
+      if (incomingVariantIds.length > 0) {
+        await tx.variant.updateMany({
+          where: {
+            productId,
+            id: { notIn: incomingVariantIds }
+          },
+          data: { isActive: false }
+        });
+      } else {
+        await tx.variant.updateMany({
+          where: { productId },
+          data: { isActive: false }
+        });
+      }
+
+      for (const variantPayload of incomingVariants) {
+        const varId = variantPayload.id ? BigInt(variantPayload.id) : undefined;
+        const skuCode = variantPayload.sku_code;
+        const price = variantPayload.price;
+        const promoPrice = variantPayload.promo_price || null;
+        const stockQty = variantPayload.stock_qty || 0;
+        const imageUrl = variantPayload.image_url || null;
+
+        let variant;
+        if (varId) {
+          variant = await tx.variant.update({
+            where: { id: varId },
+            data: { skuCode, price, promoPrice, stockQty, imageUrl, isActive: true }
+          });
+        } else {
+          variant = await tx.variant.upsert({
+            where: { skuCode },
+            update: { price, promoPrice, stockQty, imageUrl, isActive: true },
+            create: { productId, skuCode, price, promoPrice, stockQty, imageUrl, isActive: true }
+          });
+        }
+
+        if (variantPayload.options) {
+          for (const [optName, optVal] of Object.entries(variantPayload.options)) {
+            const mappedValId = optionValueMap.get(`${optName}:${optVal as string}`);
+            if (mappedValId) {
+              await tx.variantOptionValue.create({
+                data: {
+                  variantId: variant.id,
+                  optionValueId: mappedValId
+                }
+              });
+            }
+          }
+        }
+      }
+    });
 
     return Number(productId);
   }
