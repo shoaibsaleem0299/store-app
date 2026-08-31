@@ -6,9 +6,9 @@ import { defaultTheme } from "@/config/theme.config";
 
 import { Toaster } from "sonner";
 
-import { Inter, Playfair_Display } from "next/font/google";
+import { DM_Sans, Inter, Playfair_Display } from "next/font/google";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-sans" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif" });
 
 export const metadata: Metadata = {
@@ -18,10 +18,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // TODO: resolve real tenant theme server-side (Supabase) once white-label is wired up
-  const tenant = { ...defaultTheme, logoUrl: "/images/logo.svg", storeName: "Buver" };
+  const tenant = { ...defaultTheme, logoUrl: "/images/app-icon/buver-logo.png", storeName: "Buver" };
 
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${dmSans.variable} ${playfair.variable}`}>
       <body suppressHydrationWarning className="font-sans antialiased text-foreground bg-background">
         <ThemeProvider tenant={tenant}>
           <Providers>

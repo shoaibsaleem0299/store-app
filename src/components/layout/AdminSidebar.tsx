@@ -8,14 +8,24 @@ const links = [
   { href: "/admin/categories", label: "Categories" },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <aside className="w-64 border-r p-4 space-y-1">
-      {links.map((l) => (
-        <Link key={l.href} href={l.href} className="block px-3 py-2 rounded-md hover:bg-secondary">
-          {l.label}
-        </Link>
-      ))}
+    <aside className="w-full h-full md:w-64 border-r bg-card p-4 flex flex-col">
+      <div className="px-3 py-4 mb-4 hidden md:block">
+        <h2 className="text-xl font-bold tracking-tight">Admin</h2>
+      </div>
+      <div className="space-y-1 flex-1">
+        {links.map((l) => (
+          <Link 
+            key={l.href} 
+            href={l.href} 
+            onClick={onNavigate}
+            className="block px-3 py-2.5 rounded-md text-sm font-medium hover:bg-secondary transition-colors"
+          >
+            {l.label}
+          </Link>
+        ))}
+      </div>
     </aside>
   );
 }

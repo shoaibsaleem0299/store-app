@@ -7,6 +7,8 @@ export interface Product {
   base_images: string[];
   status: "draft" | "active" | "inactive";
   created_at: string;
+  variants?: Variant[];
+  option_types?: OptionType[];
 }
 
 export interface OptionType {

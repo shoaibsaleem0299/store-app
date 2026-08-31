@@ -96,7 +96,7 @@ export class ProductModel extends BaseModel<Product> {
     const incomingOptions = payload.optionTypes || [];
     const incomingVariants = payload.variants || [];
 
-    let newProductId: bigint = 0;
+    let newProductId: bigint = BigInt(0);
 
     await this.prisma.$transaction(async (tx) => {
       // 1. Create Product
@@ -272,5 +272,32 @@ export class ProductModel extends BaseModel<Product> {
 
     return Number(productId);
   }
-}
 
+  override async delete(id: string | number) {
+    const productId = this.parseId(id) as bigint;
+
+    await this.prisma.$transaction(async (tx) => {
+      // Find all variants for this product
+      const variants = await tx.variant.findMany({
+        where: { productId },
+        select: { id: true },
+      });
+
+      const variantIds = variants.map((v: any) => v.id);
+
+      if (variantIds.length > 0) {
+        // Delete cart items that reference these variants
+        await tx.cartItem.deleteMany({
+          where: { variantId: { in: variantIds } },
+        });
+      }
+
+      // Now delete the product (which cascades to variants due to Prisma schema relations)
+      await tx.product.delete({
+        where: { id: productId },
+      });
+    });
+
+    return true;
+  }
+}

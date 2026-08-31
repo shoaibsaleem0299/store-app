@@ -1,23 +1,29 @@
-import { BaseApiService } from "./baseApiService";
+import { BaseApiClientService } from "./baseApiService";
 import type { Product } from "@/types/product.types";
 
-class ProductService extends BaseApiService<Product> {
+class ProductService extends BaseApiClientService<Product> {
   constructor() {
     super("products");
   }
 
   async getVariant(productId: string | number, options: Record<string, string>) {
-    const query = new URLSearchParams(options).toString();
-    const res = await fetch(`/api/products/${productId}/variant?${query}`);
-    return this.handle(res);
+    return this.client.get(`/${productId}/variant`, { params: options }) as unknown as Promise<any>;
   }
 
   async listWithMeta(params?: Record<string, any>) {
-    const query = params ? "?" + new URLSearchParams(params).toString() : "";
-    const res = await fetch(`/api/products${query}`);
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message ?? "Request failed");
-    return { data: json.data as Product[], meta: json.meta };
+    const res = await this.client.get("", { params }) as any;
+    return { data: res.data as Product[], meta: res.meta };
+  }
+
+  async createAdmin(payload: any) {
+    // Override baseURL to hit the admin endpoint
+    const res = await this.client.post("/api/admin/products", payload, { baseURL: "/" }) as any;
+    return res;
+  }
+
+  async updateAdmin(id: string | number, payload: any) {
+    const res = await this.client.put(`/api/admin/products/${id}`, payload, { baseURL: "/" }) as any;
+    return res;
   }
 }
 

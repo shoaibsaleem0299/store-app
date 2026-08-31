@@ -22,7 +22,7 @@ model Category {
   products  Product[]
 
   createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  updatedAt DateTime   @default(now()) @updatedAt @map("updated_at")
 
   @@index([parentId])
   @@map("categories")
@@ -50,7 +50,7 @@ model Product {
   variants    Variant[]
 
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@index([categoryId])
   @@index([status])
@@ -130,7 +130,7 @@ model Variant {
   orderItems          OrderItem[]
 
   createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@index([productId])
   @@index([productId, isActive])
@@ -143,8 +143,8 @@ model Variant {
 // =========================
 
 model VariantOptionValue {
-  variantId     BigInt
-  optionValueId BigInt
+  variantId     BigInt @map("variant_id")
+  optionValueId BigInt @map("option_value_id")
 
   variant       Variant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
   optionValue   OptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
@@ -170,7 +170,7 @@ model CartItem {
   quantity  Int     @default(1)
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@unique([userId, variantId])
   @@index([userId])
@@ -202,7 +202,7 @@ model Order {
   orderItems      OrderItem[]
 
   createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@index([buyerId])
   @@index([status])
@@ -249,7 +249,7 @@ model Profile {
   role      String   @default("customer")
 
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("profiles")
 }

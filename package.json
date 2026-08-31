@@ -23,6 +23,7 @@
     "@reduxjs/toolkit": "^2.2.0",
     "@supabase/supabase-js": "^2.112.3",
     "@tanstack/react-table": "^8.21.3",
+    "axios": "^1.19.0",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",

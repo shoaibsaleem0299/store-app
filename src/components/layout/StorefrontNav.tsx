@@ -112,9 +112,11 @@ export function StorefrontNav() {
             </Link>
           )}
 
-          <div className="flex items-center relative">
-            <CartDrawer />
-          </div>
+          {user?.role !== "admin" && (
+            <div className="flex items-center relative">
+              <CartDrawer />
+            </div>
+          )}
         </div>
       </div>
     </header>

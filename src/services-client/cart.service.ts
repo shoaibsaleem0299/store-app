@@ -1,4 +1,10 @@
-import { BaseApiService } from "./baseApiService";
+import { BaseApiClientService } from "./baseApiService";
 import type { CartItem } from "@/types/product.types";
 
-export const cartService = new BaseApiService<CartItem>("cart");
+class CartService extends BaseApiClientService<CartItem> {
+  constructor() {
+    super("cart");
+  }
+}
+
+export const cartService = new CartService();

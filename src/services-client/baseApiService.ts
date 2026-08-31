@@ -1,45 +1,69 @@
-export class BaseApiService<T> {
-  constructor(protected resource: string) { }
+import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios";
 
-  private baseUrl = "/api";
+export class BaseApiClientService<T> {
+  protected client: AxiosInstance;
 
-  async list(params?: Record<string, any>) {
-    const query = params ? "?" + new URLSearchParams(params).toString() : "";
-    const res = await fetch(`${this.baseUrl}/${this.resource}${query}`);
-    return this.handle<T[]>(res);
-  }
-
-  async getById(id: string | number) {
-    const res = await fetch(`${this.baseUrl}/${this.resource}/${id}`);
-    return this.handle<T>(res);
-  }
-
-  async create(payload: Partial<T>) {
-    const res = await fetch(`${this.baseUrl}/${this.resource}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+  constructor(protected resource: string) {
+    this.client = axios.create({
+      baseURL: `/api/${resource}`,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
     });
-    return this.handle<T>(res);
-  }
 
-  async update(id: string | number, payload: Partial<T>) {
-    const res = await fetch(`${this.baseUrl}/${this.resource}/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    // Request interceptor to attach token
+    this.client.interceptors.request.use((config) => {
+      // Try to get token from cookie
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("token="))
+        ?.split("=")[1];
+        
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
     });
-    return this.handle<T>(res);
+
+    // Response interceptor for generic error handling
+    this.client.interceptors.response.use(
+      (response: AxiosResponse) => {
+        const data = response.data;
+        if (data && data.success === false) {
+           return Promise.reject(new Error(data.message || "Request failed"));
+        }
+        return response.data;
+      },
+      (error: AxiosError<{ message?: string, success?: boolean }>) => {
+        const message = error.response?.data?.message || error.message || "Request failed";
+        return Promise.reject(new Error(message));
+      }
+    );
   }
 
-  async remove(id: string | number) {
-    const res = await fetch(`${this.baseUrl}/${this.resource}/${id}`, { method: "DELETE" });
-    return this.handle<null>(res);
+  async list(params?: Record<string, any>): Promise<T[]> {
+    const res = await this.client.get("", { params });
+    return ((res as any).data !== undefined ? (res as any).data : res) as T[];
   }
 
-  protected async handle<R>(res: Response): Promise<R> {
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message ?? "Request failed");
-    return json.data;
+  async getById(id: string | number): Promise<T> {
+    const res = await this.client.get(`/${id}`);
+    return ((res as any).data !== undefined ? (res as any).data : res) as T;
+  }
+
+  async create(payload: Partial<T>): Promise<T> {
+    const res = await this.client.post("", payload);
+    return ((res as any).data !== undefined ? (res as any).data : res) as T;
+  }
+
+  async update(id: string | number, payload: Partial<T>): Promise<T> {
+    const res = await this.client.put(`/${id}`, payload);
+    return ((res as any).data !== undefined ? (res as any).data : res) as T;
+  }
+
+  async remove(id: string | number): Promise<null> {
+    const res = await this.client.delete(`/${id}`);
+    return ((res as any).data !== undefined ? (res as any).data : null) as null;
   }
 }

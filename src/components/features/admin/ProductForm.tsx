@@ -23,6 +23,7 @@ import {
 import { Uploads } from "@/components/shared/Uploads";
 import { toast } from "sonner";
 import { categoryService, Category } from "@/services-client/category.service";
+import { productService } from "@/services-client/product.service";
 
 interface Option {
   id: number;
@@ -47,7 +48,7 @@ interface ProductFormProps {
 
 export function ProductForm({ onSuccess, initialData }: ProductFormProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -308,13 +309,9 @@ export function ProductForm({ onSuccess, initialData }: ProductFormProps) {
 
     setSubmitting(true);
     try {
-      const method = initialData?.id ? "PUT" : "POST";
-      const url = initialData?.id ? `/api/admin/products/${initialData.id}` : "/api/admin/products";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      let res;
+      if (initialData?.id) {
+        res = await productService.updateAdmin(initialData.id, {
           product: {
             name: name.trim(),
             description: description.trim() || null,
@@ -324,18 +321,27 @@ export function ProductForm({ onSuccess, initialData }: ProductFormProps) {
           },
           optionTypes: cleanedOptions,
           variants: cleanedVariants,
-        }),
-      });
+        });
+      } else {
+        res = await productService.createAdmin({
+          product: {
+            name: name.trim(),
+            description: description.trim() || null,
+            brand: brand.trim() || null,
+            category_id: Number(categoryId),
+            base_images: baseImages,
+          },
+          optionTypes: cleanedOptions,
+          variants: cleanedVariants,
+        });
+      }
 
-      const json = await res.json();
-      if (json.success) {
+      if (res) {
         toast.success(initialData?.id ? "Product updated successfully!" : "Product and variants created successfully!");
         if (onSuccess) onSuccess();
-      } else {
-        toast.error(json.message || "Failed to save product.");
       }
     } catch (err: any) {
-      toast.error("Failed to save product.");
+      toast.error(err.message || "Failed to save product.");
     } finally {
       setSubmitting(false);
     }
@@ -515,11 +521,6 @@ export function ProductForm({ onSuccess, initialData }: ProductFormProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Button variant="secondary" onClick={addVariant}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Variant
-          </Button>
-
           <div className="space-y-6">
             {variants.map((variant) => (
               <div key={variant.id} className="border p-4 rounded-md space-y-6">
@@ -659,6 +660,10 @@ export function ProductForm({ onSuccess, initialData }: ProductFormProps) {
               </div>
             ))}
           </div>
+          <Button variant="secondary" onClick={addVariant}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Variant
+          </Button>
         </CardContent>
       </Card>
 

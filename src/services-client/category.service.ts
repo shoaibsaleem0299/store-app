@@ -1,4 +1,4 @@
-import { BaseApiService } from "./baseApiService";
+import { BaseApiClientService } from "./baseApiService";
 
 export interface Category {
   id: number;
@@ -6,4 +6,4 @@ export interface Category {
   parent_id?: number | null;
 }
 
-export const categoryService = new BaseApiService<Category>("categories");
+export const categoryService = new BaseApiClientService<Category>("categories");
