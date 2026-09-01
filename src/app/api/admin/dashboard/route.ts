@@ -18,16 +18,28 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // 2. Today's revenue
+    // 2. Today's revenue (excluding delivery fees)
     const revenueData = await prisma.order.findMany({
-      select: { totalAmount: true },
+      select: {
+        orderItems: {
+          select: {
+            unitPrice: true,
+            quantity: true,
+          }
+        }
+      },
       where: {
         createdAt: { gte: startOfDay },
         status: { in: ["paid", "shipped", "delivered"] }
       }
     });
 
-    const todayRevenue = revenueData.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    let todayRevenue = 0;
+    for (const order of revenueData) {
+      for (const item of order.orderItems) {
+        todayRevenue += Number(item.unitPrice) * item.quantity;
+      }
+    }
 
     // 3. Low stock variants (stock_qty < 5)
     const lowStockData = await prisma.variant.findMany({

@@ -12,7 +12,7 @@ export default function CartPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { items, loading } = useSelector((state: RootState) => state.cart);
 
-  const subtotal = items.reduce((acc, item) => {
+  const subtotal = items.reduce((acc: number, item: any) => {
     const price = item.variants?.promo_price ?? item.variants?.price ?? 0;
     return acc + price * item.quantity;
   }, 0);
@@ -48,7 +48,7 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items List */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
+          {items.map((item: any) => (
             <div
               key={item.id}
               className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-border rounded-lg bg-card text-card-foreground gap-4"

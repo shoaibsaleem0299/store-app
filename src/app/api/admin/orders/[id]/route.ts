@@ -3,6 +3,17 @@ import { OrderModel } from "@/models/order.model";
 import { OrderController } from "@/controllers/order.controller";
 import { withRole } from "@/middlewares/withRole";
 
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const guard = await withRole(["admin"])(req);
+  if (guard instanceof NextResponse) return guard;
+
+  const { id } = await params;
+  const controller = new OrderController(new OrderModel());
+  
+  const { status, body } = await controller.getWithItems(id);
+  return NextResponse.json(body, { status });
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const guard = await withRole(["admin"])(req);
   if (guard instanceof NextResponse) return guard;

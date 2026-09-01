@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { customerService } from "@/services-client/customer.service";
+import { BaseApiClientService } from "@/services-client/baseApiService";
 import { DataTable } from "@/components/shared/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import Link from "next/link";
+import { Eye } from "lucide-react";
 
 interface Customer {
   id: string;
@@ -20,7 +23,8 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    customerService
+    const adminCustomerService = new BaseApiClientService<Customer>("admin/customers");
+    adminCustomerService
       .list()
       .then((data: any) => {
         setCustomers(data || []);
@@ -63,6 +67,18 @@ export default function CustomersPage() {
             day: "numeric",
           })}
         </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={`/admin/orders?buyer_id=${row.original.id}`}>
+            <Eye className="w-4 h-4 mr-2" />
+            View Orders
+          </Link>
+        </Button>
       ),
     },
   ];

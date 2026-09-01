@@ -6,7 +6,15 @@ export class BaseController<T> {
   async list(searchParams: URLSearchParams): Promise<any> {
     const page = Number(searchParams.get("page") ?? 1);
     const limit = Number(searchParams.get("limit") ?? 20);
-    const { data, total } = await this.model.findAll({}, page, limit);
+    
+    const filters: Record<string, any> = {};
+    for (const [key, value] of Array.from(searchParams.entries())) {
+      if (key !== "page" && key !== "limit") {
+        filters[key] = value;
+      }
+    }
+    
+    const { data, total } = await this.model.findAll(filters, page, limit);
     return this.success(data, { page, limit, total });
   }
 

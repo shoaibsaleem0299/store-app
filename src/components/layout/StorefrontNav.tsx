@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/store/store";
 import { authService } from "@/services/auth.service";
 import { logout } from "@/store/slices/auth.slice";
+import { hydrateCart } from "@/store/slices/cart.slice";
 import { Button } from "@/components/ui/button";
 import { CartDrawer } from "@/components/features/storefront/CartDrawer";
 import { toast } from "sonner";
@@ -22,6 +24,10 @@ import { Search, LogOut, LayoutDashboard, ShoppingBag, User } from "lucide-react
 export function StorefrontNav() {
   const dispatch = useDispatch<AppDispatch>();
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    dispatch(hydrateCart());
+  }, [dispatch]);
 
   const handleLogout = async () => {
     try {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { orderService } from "@/services-client/order.service";
+import { BaseApiClientService } from "@/services-client/baseApiService";
 import { DataTable } from "@/components/shared/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Eye } from "lucide-react";
 
 interface Order {
   id: string;
@@ -16,15 +19,26 @@ interface Order {
   status: string;
   total_amount: number;
   created_at: string;
+  shipping_address?: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    city?: string;
+    country?: string;
+  };
 }
 
 export default function AdminOrdersPage() {
+  const searchParams = useSearchParams();
+  const buyerId = searchParams.get("buyer_id");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = async () => {
     try {
-      const res: any = await orderService.list();
+      const adminOrderService = new BaseApiClientService<Order>("admin/orders");
+      const params = buyerId ? { buyer_id: buyerId } : undefined;
+      const res: any = await adminOrderService.list(params);
       setOrders(res || []);
     } catch {
       toast.error("Failed to load orders.");
@@ -35,7 +49,7 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [buyerId]);
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
@@ -81,8 +95,20 @@ export default function AdminOrdersPage() {
     },
     {
       accessorKey: "buyer_id",
-      header: "Buyer ID",
-      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.getValue("buyer_id")}</span>,
+      header: "Customer",
+      cell: ({ row }) => {
+        const addr = row.original.shipping_address;
+        if (!addr) {
+          return <span className="text-muted-foreground text-xs">Unknown (ID: {row.getValue("buyer_id")})</span>;
+        }
+        return (
+          <div className="flex flex-col">
+            <span className="font-semibold text-sm">{addr.full_name || "Guest"}</span>
+            {addr.email && <span className="text-xs text-muted-foreground">{addr.email}</span>}
+            {addr.phone && <span className="text-xs text-muted-foreground">{addr.phone}</span>}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "created_at",
@@ -134,6 +160,18 @@ export default function AdminOrdersPage() {
           </div>
         );
       },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={`/admin/orders/${row.original.id}`}>
+            <Eye className="w-4 h-4 mr-2" />
+            View Details
+          </Link>
+        </Button>
+      ),
     },
   ];
 

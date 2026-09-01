@@ -40,11 +40,11 @@ export function CartDrawer() {
   const [open, setOpen] = useState(false);
 
   const totalItemCount = items.reduce(
-    (acc, item) => acc + item.quantity,
+    (acc: number, item: any) => acc + item.quantity,
     0
   );
 
-  const subtotal = items.reduce((acc, item) => {
+  const subtotal = items.reduce((acc: number, item: any) => {
     const price =
       item.variants?.promo_price ??
       item.variants?.price ??
@@ -163,7 +163,7 @@ export function CartDrawer() {
           {/* CART ITEMS */}
           {items.length > 0 && (
             <div className="space-y-4">
-              {items.map((item) => {
+              {items.map((item: any) => {
                 const price =
                   item.variants?.promo_price ??
                   item.variants?.price ??

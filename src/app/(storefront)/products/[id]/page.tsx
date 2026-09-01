@@ -109,12 +109,6 @@ export default function ProductDetailPage() {
       return;
     }
 
-    if (!isAuthenticated) {
-      toast.error("Please login to add items to your cart.");
-      router.push("/login");
-      return;
-    }
-
     if (selectedVariant.stock_qty <= 0) {
       toast.error("This product is out of stock.");
       return;
@@ -123,12 +117,13 @@ export default function ProductDetailPage() {
     setAdding(true);
 
     try {
-      await dispatch(
+      dispatch(
         addToCart({
           variant_id: selectedVariant.id,
           quantity,
+          variant: selectedVariant,
         })
-      ).unwrap();
+      );
 
       toast.success("Added to cart successfully!");
     } catch (err: any) {

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "@/store/store";
-import { fetchCart } from "@/store/slices/cart.slice";
+import { fetchCart, clearCart } from "@/store/slices/cart.slice";
 import { orderService } from "@/services-client/order.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,10 +19,12 @@ import Link from "next/link";
 
 const checkoutSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
   addressLine: z.string().min(5, "Address must be at least 5 characters"),
   city: z.string().min(2, "City must be at least 2 characters"),
   state: z.string().min(2, "State must be at least 2 characters"),
-  zipCode: z.string().min(5, "ZIP code must be at least 5 characters"),
+  country: z.string().min(2, "Country must be at least 2 characters").default("Pakistan"),
+  zipCode: z.string().optional(),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
 });
 
@@ -35,12 +37,12 @@ export default function CheckoutPage() {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!cartLoading && items.length === 0) {
-      toast.error("Your cart is empty. Add items before checking out.");
-      router.push("/");
-    }
-  }, [items, cartLoading, router]);
+  // useEffect(() => {
+  //   if (!cartLoading && items.length === 0) {
+  //     // toast.error("Your cart is empty. Add items before checking out.");
+  //     router.push("/");
+  //   }
+  // }, [items, cartLoading, router]);
 
   const {
     register,
@@ -50,15 +52,17 @@ export default function CheckoutPage() {
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       fullName: "",
+      email: "",
       addressLine: "",
       city: "",
       state: "",
+      country: "Pakistan",
       zipCode: "",
       phone: "",
     },
   });
 
-  const subtotal = items.reduce((acc, item) => {
+  const subtotal = items.reduce((acc: number, item: any) => {
     const price = item.variants?.promo_price ?? item.variants?.price ?? 0;
     return acc + price * item.quantity;
   }, 0);
@@ -66,25 +70,25 @@ export default function CheckoutPage() {
   const total = subtotal + shipping;
 
   const onSubmit = async (values: CheckoutFormValues) => {
-    if (!isAuthenticated) {
-      toast.error("Please log in to complete your checkout.");
-      router.push("/login");
-      return;
-    }
-
     setSubmitting(true);
     try {
-      // Create the order via API
-      const order = await orderService.create({
-        shipping_address: values,
-      } as any);
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shipping_address: values,
+          cartItems: items,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to place order.");
 
       toast.success("Order placed successfully!");
-      // Refresh the client-side cart (should become empty)
-      dispatch(fetchCart());
+      dispatch(clearCart());
 
-      // Redirect to the buyer's order details or history page
-      router.push(`/orders`);
+      // Redirect to the newly created tracking page
+      router.push(`/track-order/${data.orderId}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to place order.");
     } finally {
@@ -136,6 +140,20 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="email">Email (Optional)</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="john@example.com"
+                    {...register("email")}
+                    className={errors.email ? "border-destructive" : ""}
+                  />
+                  {errors.email && (
+                    <p className="text-xs text-destructive font-medium">{errors.email.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="addressLine">Street Address</Label>
                   <Input
                     id="addressLine"
@@ -148,7 +166,7 @@ export default function CheckoutPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">City</Label>
                     <Input
@@ -174,7 +192,7 @@ export default function CheckoutPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="zipCode">ZIP / Postal Code</Label>
+                    <Label htmlFor="zipCode">ZIP Code</Label>
                     <Input
                       id="zipCode"
                       placeholder="54000"
@@ -183,6 +201,18 @@ export default function CheckoutPage() {
                     />
                     {errors.zipCode && (
                       <p className="text-xs text-destructive font-medium">{errors.zipCode.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country</Label>
+                    <Input
+                      id="country"
+                      placeholder="Pakistan"
+                      {...register("country")}
+                      className={errors.country ? "border-destructive" : ""}
+                    />
+                    {errors.country && (
+                      <p className="text-xs text-destructive font-medium">{errors.country.message}</p>
                     )}
                   </div>
                 </div>
@@ -204,7 +234,7 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
-                {items.map((item) => (
+                {items.map((item: any) => (
                   <div key={item.id} className="flex justify-between items-center gap-4 text-sm">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">{item.variants?.sku_code}</p>
