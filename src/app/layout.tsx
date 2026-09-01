@@ -12,8 +12,26 @@ const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-sans" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif" });
 
 export const metadata: Metadata = {
-  title: "Buver | Daily Winds For Colors",
+  metadataBase: new URL("https://buver.vercel.app"),
+  title: {
+    default: "Buver | Daily Winds For Colors",
+    template: "%s | Buver",
+  },
   description: "Premium single-vendor storefront for women's fashion",
+  keywords: ["dupatta", "stoller", "scarves", "shawls", "fashion", "women's fashion", "dresses", "premium clothing", "fashion store", "buver"],
+  openGraph: {
+    title: "Buver | Daily Winds For Colors",
+    description: "Premium single-vendor storefront for women's fashion",
+    url: "https://buver.vercel.app",
+    siteName: "Buver",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Buver | Daily Winds For Colors",
+    description: "Premium single-vendor storefront for women's fashion",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
