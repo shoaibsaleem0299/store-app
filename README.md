@@ -57,3 +57,10 @@ src/
 ├── lib/                  # Singletons (Prisma, Supabase)
 └── utils/                # Utility helpers (cn, formatCurrency, generateSku)
 ```
+
+
+## Deployment
+```bash
+npm run build
+npm run start
+```
